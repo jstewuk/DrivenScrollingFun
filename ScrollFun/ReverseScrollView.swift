@@ -9,6 +9,14 @@
 import SwiftUI
 import Combine
 
+typealias DragChangedSubject = PassthroughSubject<DragGesture.Value, Never>
+typealias DragEndedSubject = PassthroughSubject<EndWrapper, Never>
+
+struct EndWrapper {
+    let value: DragGesture.Value
+    let outerHeight: CGFloat
+}
+
 class ScrollViewModel: ObservableObject {
     @Published var scrollOffset:  CGFloat = CGFloat.zero
     @Published var contentHeight: CGFloat = CGFloat.zero
@@ -16,7 +24,39 @@ class ScrollViewModel: ObservableObject {
     
     @Published var dragGestureValue: DragGesture.Value?
     
-    func onDragChanged(_ value: DragGesture.Value) {
+    let dragChangedSubject: DragChangedSubject
+    let dragEndedSubject : DragEndedSubject
+    
+    var cancellables = [Cancellable]()
+    
+    init(dragChangedSubject: DragChangedSubject, dragEndedSubject: DragEndedSubject) {
+        self.dragChangedSubject = dragChangedSubject
+        self.dragEndedSubject = dragEndedSubject
+        cancellables.append(
+            dragChangedSubject.sink { (value) in
+                print("recieved dragChanged update")
+                self.onDragChangedRemote(value)
+            }
+        )
+        cancellables.append(
+            dragEndedSubject.sink { value in
+                print("recieved dragEnded update")
+                self.onDragEndedRemote(value)
+            }
+        )
+    }
+    
+    
+    private func onDragChangedRemote(_ value: DragGesture.Value) {
+        onDragChanged(value)
+    }
+    
+    func onDragChangedLocal(_ value: DragGesture.Value) {
+        dragChangedSubject.send(value)
+        onDragChanged(value)
+    }
+    
+    private func onDragChanged(_ value: DragGesture.Value) {
         // Update rendered offset
         print("Start: \(value.startLocation.y)")
         print("Current: \(value.location.y)")
@@ -24,7 +64,16 @@ class ScrollViewModel: ObservableObject {
         print("scrollOffset: \(self.scrollOffset)")
     }
     
-    func onDragEnded(_ value: DragGesture.Value, outerHeight: CGFloat) {
+    private func onDragEndedRemote(_ value: EndWrapper) {
+        onDragEnded(value.value, outerHeight: value.outerHeight)
+    }
+    
+    func onDragEndedLocal(_ value: DragGesture.Value, outerHeight: CGFloat) {
+        dragEndedSubject.send(EndWrapper(value: value, outerHeight: outerHeight))
+        onDragEnded(value, outerHeight: outerHeight)
+    }
+    
+    private func onDragEnded(_ value: DragGesture.Value, outerHeight: CGFloat) {
         // Update view to target position base on drag position
         let scrollOffset = value.location.y - value.startLocation.y
         print("Ended currentOffset=\(self.currentOffset) scrollOffset=\(scrollOffset)")
@@ -87,8 +136,8 @@ struct ReverseScrollView<Content>: View where Content: View {
                 .animation(.easeInOut)
                 .gesture(
                     DragGesture()
-                        .onChanged { self.model.onDragChanged($0) }
-                        .onEnded { self.model.onDragEnded($0, outerHeight: outerGeometry.size.height)}
+                        .onChanged { self.model.onDragChangedLocal($0) }
+                        .onEnded { self.model.onDragEndedLocal($0, outerHeight: outerGeometry.size.height)}
                 )
         }
     }
@@ -111,7 +160,9 @@ extension ViewHeightKey: ViewModifier {
 
 
 struct ReverseScrollView_Previews: PreviewProvider {
-    static let model = ScrollViewModel()
+    static let dragChangedSubject = DragChangedSubject()
+    static let dragEndedSubject = DragEndedSubject()
+    static let model = ScrollViewModel(dragChangedSubject: dragChangedSubject, dragEndedSubject: dragEndedSubject)
     static var previews: some View {
         ReverseScrollView(model: model) {
             BubbleView(message: "Hello")

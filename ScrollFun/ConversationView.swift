@@ -11,14 +11,20 @@ import Combine
 
 struct ConversationView: View {
     var conversation: Conversation
-    var scrollViewModel = ScrollViewModel()
+    var scrollViewModel1: ScrollViewModel
+    var scrollViewModel2: ScrollViewModel
     var dummyModel = DummyModel()
     var cancellable: Cancellable
     
+    let dragChangedSubject = DragChangedSubject()
+    let dragEndedSubject = DragEndedSubject()
+    
     init(conversation: Conversation) {
         self.conversation = conversation
-        self.cancellable = self.scrollViewModel.objectWillChange.sink {
-            print("ScrollViewModel changed")
+        self.scrollViewModel1 = ScrollViewModel(dragChangedSubject: dragChangedSubject, dragEndedSubject: dragEndedSubject)
+        self.scrollViewModel2 = ScrollViewModel(dragChangedSubject: dragChangedSubject, dragEndedSubject: dragEndedSubject)
+        self.cancellable = self.scrollViewModel1.objectWillChange.sink {
+            print("ScrollViewModel1 changed")
         }
     }
     
@@ -27,7 +33,7 @@ struct ConversationView: View {
         return
             VStack {
                 NavigationView {
-                    ReverseScrollView(model: scrollViewModel) {
+                    ReverseScrollView(model: scrollViewModel1) {
                         VStack(spacing: 8) {
                             ForEach(self.conversation.messages) { message in
                                 BubbleView(message: message.body)
@@ -39,12 +45,23 @@ struct ConversationView: View {
                 
                 Button("scroll") { self.scrollMe() }
                 Button("increment dummyVar") { self.incrementDummy() }
+                
+                NavigationView {
+                    ReverseScrollView(model: scrollViewModel2) {
+                        VStack(spacing: 8) {
+                            ForEach(self.conversation.messages) { message in
+                                BubbleView(message: message.body)
+                            }
+                        }
+                    }
+                    .navigationBarTitle(Text("Conversation"))
+                }
         }
     }
     
     func scrollMe() {
         print("scrollMe()")
-        self.scrollViewModel.scrollOffset += 100
+        self.scrollViewModel1.scrollOffset += 100
     }
     
     func incrementDummy() {
