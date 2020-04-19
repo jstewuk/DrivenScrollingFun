@@ -7,13 +7,23 @@
 //
 
 import SwiftUI
+import Combine
 
 struct ConversationView: View {
     var conversation: Conversation
+    var scrollViewModel = ScrollViewModel()
+    var cancellable: Cancellable
+    
+    init(conversation: Conversation) {
+        self.conversation = conversation
+        self.cancellable = self.scrollViewModel.objectWillChange.sink {
+            print("ScrollViewModel changed")
+        }
+    }
     
     var body: some View {
         NavigationView {
-            ReverseScrollView {
+            ReverseScrollView(model: scrollViewModel) {
                 VStack(spacing: 8) {
                     ForEach(self.conversation.messages) { message in
                         BubbleView(message: message.body)

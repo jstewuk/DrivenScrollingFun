@@ -7,13 +7,23 @@
 //
 
 import SwiftUI
+import Combine
+
+class ScrollViewModel: ObservableObject {
+    @Published var scrollOffset: CGFloat = CGFloat.zero
+    
+}
 
 struct ReverseScrollView<Content>: View where Content: View {
+    
+    @ObservedObject var model: ScrollViewModel
+    
+    var scrollOffset: Binding<CGFloat> { $model.scrollOffset }
     var content: () -> Content
     
     @State private var contentHeight = CGFloat.zero
     @State private var currentOffset = CGFloat.zero
-    @State private var scrollOffset = CGFloat.zero
+//    @State private var scrollOffset = CGFloat.zero
 
     var body: some View {
         GeometryReader { outerGeometry in
@@ -35,7 +45,7 @@ struct ReverseScrollView<Content>: View where Content: View {
     func offset(outerHeight: CGFloat, innerHeight: CGFloat) -> CGFloat {
         print("outerHeight: \(outerHeight) innerHeight: \(innerHeight)")
         
-        let totalOffset = currentOffset + scrollOffset
+        let totalOffset = currentOffset + scrollOffset.wrappedValue
         return -((innerHeight/2 - outerHeight/2) - totalOffset)
     }
     
@@ -43,7 +53,7 @@ struct ReverseScrollView<Content>: View where Content: View {
         // Update rendered offset
         print("Start: \(value.startLocation.y)")
         print("Current: \(value.location.y)")
-        self.scrollOffset = (value.location.y - value.startLocation.y)
+        self.scrollOffset.wrappedValue = (value.location.y - value.startLocation.y)
         print("scrollOffset: \(self.scrollOffset)")
     }
     
@@ -69,7 +79,7 @@ struct ReverseScrollView<Content>: View where Content: View {
             }
         }
         print("new currentOffset=\(self.currentOffset)")
-        self.scrollOffset = 0
+        self.scrollOffset.wrappedValue = 0
     }
 }
 
@@ -90,8 +100,9 @@ extension ViewHeightKey: ViewModifier {
 
 
 struct ReverseScrollView_Previews: PreviewProvider {
+    static let model = ScrollViewModel()
     static var previews: some View {
-        ReverseScrollView {
+        ReverseScrollView(model: model) {
             BubbleView(message: "Hello")
         }
         .previewLayout(.sizeThatFits)
