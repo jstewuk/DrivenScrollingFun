@@ -13,6 +13,48 @@ class ScrollViewModel: ObservableObject {
     @Published var scrollOffset:  CGFloat = CGFloat.zero
     @Published var contentHeight: CGFloat = CGFloat.zero
     @Published var currentOffset: CGFloat = CGFloat.zero
+    
+    @Published var dragGestureValue: DragGesture.Value?
+    
+    func onDragChanged(_ value: DragGesture.Value) {
+        // Update rendered offset
+        print("Start: \(value.startLocation.y)")
+        print("Current: \(value.location.y)")
+        scrollOffset = (value.location.y - value.startLocation.y)
+        print("scrollOffset: \(self.scrollOffset)")
+    }
+    
+    func onDragEnded(_ value: DragGesture.Value, outerHeight: CGFloat) {
+        // Update view to target position base on drag position
+        let scrollOffset = value.location.y - value.startLocation.y
+        print("Ended currentOffset=\(self.currentOffset) scrollOffset=\(scrollOffset)")
+        
+        let topLimit = self.contentHeight - outerHeight
+        print("topLimit: \(topLimit)")
+        
+        // Negative topLimit => Content is smaller than screen size.  We reset the scroll position on drag end:
+        if topLimit < 0 {
+            self.currentOffset = 0
+        } else {
+            // We cannot pass the bottom limit (negative scroll)
+            if self.currentOffset + scrollOffset < 0 {
+                self.currentOffset = 0
+            } else if self.currentOffset + scrollOffset > topLimit {
+                self.currentOffset = topLimit
+            } else {
+                self.currentOffset += scrollOffset
+            }
+        }
+        print("new currentOffset=\(self.currentOffset)")
+        self.scrollOffset = 0
+    }
+    
+    func offset(outerHeight: CGFloat, innerHeight: CGFloat) -> CGFloat {
+        print("outerHeight: \(outerHeight) innerHeight: \(innerHeight)")
+        
+        let totalOffset = currentOffset + scrollOffset
+        return -((innerHeight/2 - outerHeight/2) - totalOffset)
+    }
 }
 
 class DummyModel: ObservableObject {
@@ -40,55 +82,15 @@ struct ReverseScrollView<Content>: View where Content: View {
                 .modifier(ViewHeightKey())
                 .onPreferenceChange(ViewHeightKey.self) { self.contentHeight.wrappedValue = $0 }
                 .frame(height: outerGeometry.size.height)
-                .offset(y: self.offset(outerHeight: outerGeometry.size.height, innerHeight: self.contentHeight.wrappedValue))
+                .offset(y: self.model.offset(outerHeight: outerGeometry.size.height, innerHeight: self.contentHeight.wrappedValue))
                 .clipped()
                 .animation(.easeInOut)
                 .gesture(
                     DragGesture()
-                        .onChanged { self.onDragChanged($0) }
-                        .onEnded { self.onDragEnded($0, outerHeight: outerGeometry.size.height)}
+                        .onChanged { self.model.onDragChanged($0) }
+                        .onEnded { self.model.onDragEnded($0, outerHeight: outerGeometry.size.height)}
                 )
         }
-    }
-    
-    func offset(outerHeight: CGFloat, innerHeight: CGFloat) -> CGFloat {
-        print("outerHeight: \(outerHeight) innerHeight: \(innerHeight)")
-        
-        let totalOffset = currentOffset.wrappedValue + scrollOffset.wrappedValue
-        return -((innerHeight/2 - outerHeight/2) - totalOffset)
-    }
-    
-    func onDragChanged(_ value: DragGesture.Value) {
-        // Update rendered offset
-        print("Start: \(value.startLocation.y)")
-        print("Current: \(value.location.y)")
-        self.scrollOffset.wrappedValue = (value.location.y - value.startLocation.y)
-        print("scrollOffset: \(self.scrollOffset)")
-    }
-    
-    func onDragEnded(_ value: DragGesture.Value, outerHeight: CGFloat) {
-        // Update view to target position base on drag position
-        let scrollOffset = value.location.y - value.startLocation.y
-        print("Ended currentOffset=\(self.currentOffset) scrollOffset=\(scrollOffset)")
-        
-        let topLimit = self.contentHeight.wrappedValue - outerHeight
-        print("topLimit: \(topLimit)")
-        
-        // Negative topLimit => Content is smaller than screen size.  We reset the scroll position on drag end:
-        if topLimit < 0 {
-            self.currentOffset.wrappedValue = 0
-        } else {
-            // We cannot pass the bottome limit (negative scroll)
-            if self.currentOffset.wrappedValue + scrollOffset < 0 {
-                self.currentOffset.wrappedValue = 0
-            } else if self.currentOffset.wrappedValue + scrollOffset > topLimit {
-                self.currentOffset.wrappedValue = topLimit
-            } else {
-                self.currentOffset.wrappedValue += scrollOffset
-            }
-        }
-        print("new currentOffset=\(self.currentOffset)")
-        self.scrollOffset.wrappedValue = 0
     }
 }
 
