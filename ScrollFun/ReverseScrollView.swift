@@ -10,8 +10,10 @@ import SwiftUI
 import Combine
 
 class ScrollViewModel: ObservableObject {
-    @Published var scrollOffset: CGFloat = CGFloat.zero
-    
+    @Published var scrollOffset:  CGFloat = CGFloat.zero
+    @Published var contentHeight: CGFloat = CGFloat.zero
+    @Published var currentOffset: CGFloat = CGFloat.zero
+    @Published var dummyVar: Int = 0
 }
 
 struct ReverseScrollView<Content>: View where Content: View {
@@ -19,19 +21,23 @@ struct ReverseScrollView<Content>: View where Content: View {
     @ObservedObject var model: ScrollViewModel
     
     var scrollOffset: Binding<CGFloat> { $model.scrollOffset }
+    var contentHeight: Binding<CGFloat> { $model.contentHeight }
+    var currentOffset: Binding<CGFloat> { $model.currentOffset }
     var content: () -> Content
     
-    @State private var contentHeight = CGFloat.zero
-    @State private var currentOffset = CGFloat.zero
+//    @State private var contentHeight = CGFloat.zero
+//    @State private var currentOffset = CGFloat.zero
 //    @State private var scrollOffset = CGFloat.zero
 
     var body: some View {
-        GeometryReader { outerGeometry in
+        print("ReversScrollView rerendered")
+        return
+            GeometryReader { outerGeometry in
             self.content()
                 .modifier(ViewHeightKey())
-                .onPreferenceChange(ViewHeightKey.self) { self.contentHeight = $0 }
+                .onPreferenceChange(ViewHeightKey.self) { self.contentHeight.wrappedValue = $0 }
                 .frame(height: outerGeometry.size.height)
-                .offset(y: self.offset(outerHeight: outerGeometry.size.height, innerHeight: self.contentHeight))
+                .offset(y: self.offset(outerHeight: outerGeometry.size.height, innerHeight: self.contentHeight.wrappedValue))
                 .clipped()
                 .animation(.easeInOut)
                 .gesture(
@@ -45,7 +51,7 @@ struct ReverseScrollView<Content>: View where Content: View {
     func offset(outerHeight: CGFloat, innerHeight: CGFloat) -> CGFloat {
         print("outerHeight: \(outerHeight) innerHeight: \(innerHeight)")
         
-        let totalOffset = currentOffset + scrollOffset.wrappedValue
+        let totalOffset = currentOffset.wrappedValue + scrollOffset.wrappedValue
         return -((innerHeight/2 - outerHeight/2) - totalOffset)
     }
     
@@ -62,20 +68,20 @@ struct ReverseScrollView<Content>: View where Content: View {
         let scrollOffset = value.location.y - value.startLocation.y
         print("Ended currentOffset=\(self.currentOffset) scrollOffset=\(scrollOffset)")
         
-        let topLimit = self.contentHeight - outerHeight
+        let topLimit = self.contentHeight.wrappedValue - outerHeight
         print("topLimit: \(topLimit)")
         
         // Negative topLimit => Content is smaller than screen size.  We reset the scroll position on drag end:
         if topLimit < 0 {
-            self.currentOffset = 0
+            self.currentOffset.wrappedValue = 0
         } else {
             // We cannot pass the bottome limit (negative scroll)
-            if self.currentOffset + scrollOffset < 0 {
-                self.currentOffset = 0
-            } else if self.currentOffset + scrollOffset > topLimit {
-                self.currentOffset = topLimit
+            if self.currentOffset.wrappedValue + scrollOffset < 0 {
+                self.currentOffset.wrappedValue = 0
+            } else if self.currentOffset.wrappedValue + scrollOffset > topLimit {
+                self.currentOffset.wrappedValue = topLimit
             } else {
-                self.currentOffset += scrollOffset
+                self.currentOffset.wrappedValue += scrollOffset
             }
         }
         print("new currentOffset=\(self.currentOffset)")

@@ -22,6 +22,8 @@ struct ConversationView: View {
     }
     
     var body: some View {
+        print("ConversationView updated")
+        return
         VStack {
             NavigationView {
                 ReverseScrollView(model: scrollViewModel) {
@@ -35,11 +37,18 @@ struct ConversationView: View {
             }
             
             Button("scroll") { self.scrollMe() }
+            Button("increment dummyVar") { self.incrementDummy() }
         }
     }
     
     func scrollMe() {
+        print("scrollMe()")
         self.scrollViewModel.scrollOffset += 100
+    }
+    
+    func incrementDummy() {
+        print("incrementDummy()")
+        self.scrollViewModel.dummyVar += 1
     }
 }
 
