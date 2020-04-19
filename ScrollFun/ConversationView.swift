@@ -22,18 +22,27 @@ struct ConversationView: View {
     }
     
     var body: some View {
-        NavigationView {
-            ReverseScrollView(model: scrollViewModel) {
-                VStack(spacing: 8) {
-                    ForEach(self.conversation.messages) { message in
-                        BubbleView(message: message.body)
+        VStack {
+            NavigationView {
+                ReverseScrollView(model: scrollViewModel) {
+                    VStack(spacing: 8) {
+                        ForEach(self.conversation.messages) { message in
+                            BubbleView(message: message.body)
+                        }
                     }
                 }
+                .navigationBarTitle(Text("Conversation"))
             }
-            .navigationBarTitle(Text("Conversation"))
+            
+            Button("scroll") { self.scrollMe() }
         }
     }
+    
+    func scrollMe() {
+        self.scrollViewModel.scrollOffset += 100
+    }
 }
+
 
 struct ConversationView_Previews: PreviewProvider {
     static var previews: some View {
