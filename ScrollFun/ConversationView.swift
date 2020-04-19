@@ -12,6 +12,7 @@ import Combine
 struct ConversationView: View {
     var conversation: Conversation
     var scrollViewModel = ScrollViewModel()
+    var dummyModel = DummyModel()
     var cancellable: Cancellable
     
     init(conversation: Conversation) {
@@ -24,20 +25,20 @@ struct ConversationView: View {
     var body: some View {
         print("ConversationView updated")
         return
-        VStack {
-            NavigationView {
-                ReverseScrollView(model: scrollViewModel) {
-                    VStack(spacing: 8) {
-                        ForEach(self.conversation.messages) { message in
-                            BubbleView(message: message.body)
+            VStack {
+                NavigationView {
+                    ReverseScrollView(model: scrollViewModel) {
+                        VStack(spacing: 8) {
+                            ForEach(self.conversation.messages) { message in
+                                BubbleView(message: message.body)
+                            }
                         }
                     }
+                    .navigationBarTitle(Text("Conversation"))
                 }
-                .navigationBarTitle(Text("Conversation"))
-            }
-            
-            Button("scroll") { self.scrollMe() }
-            Button("increment dummyVar") { self.incrementDummy() }
+                
+                Button("scroll") { self.scrollMe() }
+                Button("increment dummyVar") { self.incrementDummy() }
         }
     }
     
@@ -48,7 +49,7 @@ struct ConversationView: View {
     
     func incrementDummy() {
         print("incrementDummy()")
-        self.scrollViewModel.dummyVar += 1
+        self.dummyModel.dummyVar += 1
     }
 }
 

@@ -13,6 +13,9 @@ class ScrollViewModel: ObservableObject {
     @Published var scrollOffset:  CGFloat = CGFloat.zero
     @Published var contentHeight: CGFloat = CGFloat.zero
     @Published var currentOffset: CGFloat = CGFloat.zero
+}
+
+class DummyModel: ObservableObject {
     @Published var dummyVar: Int = 0
 }
 
