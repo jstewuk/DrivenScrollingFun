@@ -19,13 +19,11 @@ struct ConversationView: View {
     
     let dragChangedSubject = DragChangedSubject()
     let dragEndedSubject = DragEndedSubject()
-    let dragChangedSubject2 = DragChangedSubject()
-    let dragEndedSubject2 = DragEndedSubject()
     
     init(conversation: Conversation) {
         self.conversation = conversation
         self.scrollViewModel1 = ScrollViewModel("model1", dragChangedSubject: dragChangedSubject, dragEndedSubject: dragEndedSubject)
-        self.scrollViewModel2 = ScrollViewModel("model2", dragChangedSubject: dragChangedSubject2, dragEndedSubject: dragEndedSubject2)
+        self.scrollViewModel2 = ScrollViewModel("model2", dragChangedSubject: dragChangedSubject, dragEndedSubject: dragEndedSubject)
         self.cancellable = self.scrollViewModel1.objectWillChange.sink {
             os_log("model1 changed")
         }

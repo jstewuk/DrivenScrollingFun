@@ -14,6 +14,7 @@ typealias DragChangedSubject = PassthroughSubject<DragGesture.Value, Never>
 typealias DragEndedSubject = PassthroughSubject<EndWrapper, Never>
 
 struct EndWrapper {
+    let modelInstance: String
     let value: DragGesture.Value
     let outerHeight: CGFloat
 }
@@ -68,13 +69,15 @@ class ScrollViewModel: ObservableObject {
     
     private func onDragEndedRemote(_ value: EndWrapper) {
         os_log("%@ onDragEndedRemote", self.instanceName)
+        // Filter out stuff we send...
+        if value.modelInstance == self.instanceName { return }
         onDragEnded(value.value, outerHeight: value.outerHeight)
     }
     
     func onDragEndedLocal(_ value: DragGesture.Value, outerHeight: CGFloat) {
         os_log("$@ ondDragEndedLocal", self.instanceName)
         onDragEnded(value, outerHeight: outerHeight)
-        dragEndedSubject.send(EndWrapper(value: value, outerHeight: outerHeight))
+        dragEndedSubject.send(EndWrapper(modelInstance: self.instanceName, value: value, outerHeight: outerHeight))
     }
     
     private func onDragEnded(_ value: DragGesture.Value, outerHeight: CGFloat) {
