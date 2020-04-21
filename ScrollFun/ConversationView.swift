@@ -14,23 +14,22 @@ struct ConversationView: View {
     var conversation: Conversation
     var scrollViewModel1: ScrollViewModel
     var scrollViewModel2: ScrollViewModel
-    var dummyModel = DummyModel()
     var cancellable: Cancellable
     
-    let dragChangedSubject = DragChangedSubject()
-    let dragEndedSubject = DragEndedSubject()
+    let subj1_2 = DragSubject()
+    let subj2_1 = DragSubject()
     
     init(conversation: Conversation) {
         self.conversation = conversation
-        self.scrollViewModel1 = ScrollViewModel("model1", dragChangedSubject: dragChangedSubject, dragEndedSubject: dragEndedSubject)
-        self.scrollViewModel2 = ScrollViewModel("model2", dragChangedSubject: dragChangedSubject, dragEndedSubject: dragEndedSubject)
+        self.scrollViewModel1 = ScrollViewModel("model1", inboundSubject: subj2_1, outboundSubject: subj1_2)
+        self.scrollViewModel2 = ScrollViewModel("model2", inboundSubject: subj1_2, outboundSubject: subj2_1)
         self.cancellable = self.scrollViewModel1.objectWillChange.sink {
             os_log("model1 changed")
         }
     }
     
     var body: some View {
-        print("ConversationView updated")
+//        print("ConversationView updated")
         return
             VStack {
                 NavigationView {
@@ -45,7 +44,6 @@ struct ConversationView: View {
                 }
                 
                 Button("scroll") { self.scrollMe() }
-                Button("increment dummyVar") { self.incrementDummy() }
                 
                 NavigationView {
                     ReverseScrollView(model: scrollViewModel2) {
@@ -55,7 +53,7 @@ struct ConversationView: View {
                             }
                         }
                     }
-                    .navigationBarTitle(Text("Conversation"))
+                    .navigationBarTitle(Text("Conversation Mirror"))
                 }
         }
     }
@@ -65,10 +63,6 @@ struct ConversationView: View {
         self.scrollViewModel1.scrollOffset += 100
     }
     
-    func incrementDummy() {
-        print("incrementDummy()")
-        self.dummyModel.dummyVar += 1
-    }
 }
 
 

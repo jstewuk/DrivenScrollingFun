@@ -10,14 +10,26 @@ import SwiftUI
 import Combine
 import os
 
-typealias DragChangedSubject = PassthroughSubject<DragGesture.Value, Never>
-typealias DragEndedSubject = PassthroughSubject<EndWrapper, Never>
-
 struct EndWrapper {
-    let modelInstance: String
-    let value: DragGesture.Value
+    let value: DragValue
     let outerHeight: CGFloat
 }
+
+struct DragValue {
+    let startLocation: CGPoint
+    let location: CGPoint
+    init(_ value: DragGesture.Value) {
+        self.startLocation = value.startLocation
+        self.location = value.location
+    }
+}
+
+enum DragData {
+    case dragEnded(EndWrapper)
+    case dragChanged(DragValue)
+}
+
+typealias DragSubject = PassthroughSubject<DragData, Never>
 
 class ScrollViewModel: ObservableObject {
     @Published var scrollOffset:  CGFloat = CGFloat.zero
@@ -26,40 +38,48 @@ class ScrollViewModel: ObservableObject {
     
     @Published var dragGestureValue: DragGesture.Value?
     
-    let dragChangedSubject: DragChangedSubject
-    let dragEndedSubject : DragEndedSubject
-    
+    let inboundSubject: DragSubject
+    let outboundSubject : DragSubject
+        
     var cancellables = [Cancellable]()
     private let instanceName: String
     
-    init(_ instanceName: String, dragChangedSubject: DragChangedSubject, dragEndedSubject: DragEndedSubject) {
-        self.dragChangedSubject = dragChangedSubject
-        self.dragEndedSubject = dragEndedSubject
+    init(_ instanceName: String, inboundSubject: DragSubject, outboundSubject: DragSubject) {
+        self.inboundSubject = inboundSubject
+        self.outboundSubject = outboundSubject
         self.instanceName = instanceName
+        self.setupPipes()
+    }
+    
+    private func setupPipes() {
+        // Inbound
         cancellables.append(
-            dragChangedSubject.sink { (value) in
-                os_log("received dragChanged update")
-                self.onDragChangedRemote(value)
-            }
-        )
-        cancellables.append(
-            dragEndedSubject.sink { value in
-                os_log("received dragEnded update")
-                self.onDragEndedRemote(value)
+            inboundSubject
+                .delay(for: DispatchQueue.SchedulerTimeType.Stride(floatLiteral: 0.5), scheduler: DispatchQueue.main)
+                .sink { (value) in
+                    os_log("received update")
+                    switch value {
+                    case let .dragEnded(endWrapper):
+                        self.onDragEndedRemote(endWrapper)
+                    case let .dragChanged(value):
+                        self.onDragChangedRemote(value)
+                    }
             }
         )
     }
     
-    private func onDragChangedRemote(_ value: DragGesture.Value) {
+    
+    
+    private func onDragChangedRemote(_ value: DragValue) {
         onDragChanged(value)
     }
     
-    func onDragChangedLocal(_ value: DragGesture.Value) {
+    func onDragChangedLocal(_ value: DragValue) {
         onDragChanged(value)
-        dragChangedSubject.send(value)
+        outboundSubject.send(.dragChanged(value))
     }
     
-    private func onDragChanged(_ value: DragGesture.Value) {
+    private func onDragChanged(_ value: DragValue) {
         // Update rendered offset
         os_log("Start: %@","\(value.startLocation.y)")
         os_log("Current: %@", "\(value.location.y)")
@@ -69,18 +89,16 @@ class ScrollViewModel: ObservableObject {
     
     private func onDragEndedRemote(_ value: EndWrapper) {
         os_log("%@ onDragEndedRemote", self.instanceName)
-        // Filter out stuff we send...
-        if value.modelInstance == self.instanceName { return }
         onDragEnded(value.value, outerHeight: value.outerHeight)
     }
     
-    func onDragEndedLocal(_ value: DragGesture.Value, outerHeight: CGFloat) {
+    func onDragEndedLocal(_ value: DragValue, outerHeight: CGFloat) {
         os_log("$@ ondDragEndedLocal", self.instanceName)
         onDragEnded(value, outerHeight: outerHeight)
-        dragEndedSubject.send(EndWrapper(modelInstance: self.instanceName, value: value, outerHeight: outerHeight))
+        outboundSubject.send(.dragEnded(EndWrapper(value: value, outerHeight: outerHeight)))
     }
     
-    private func onDragEnded(_ value: DragGesture.Value, outerHeight: CGFloat) {
+    private func onDragEnded(_ value: DragValue, outerHeight: CGFloat) {
         // Update view to target position base on drag position
         os_log("%@ onDragEnded", self.instanceName)
         let scrollOffset = value.location.y - value.startLocation.y
@@ -127,10 +145,6 @@ struct ReverseScrollView<Content>: View where Content: View {
     var currentOffset: Binding<CGFloat> { $model.currentOffset }
     var content: () -> Content
     
-//    @State private var contentHeight = CGFloat.zero
-//    @State private var currentOffset = CGFloat.zero
-//    @State private var scrollOffset = CGFloat.zero
-
     var body: some View {
         print("ReversScrollView rerendered")
         return
@@ -144,8 +158,8 @@ struct ReverseScrollView<Content>: View where Content: View {
                 .animation(.easeInOut)
                 .gesture(
                     DragGesture()
-                        .onChanged { self.model.onDragChangedLocal($0) }
-                        .onEnded { self.model.onDragEndedLocal($0, outerHeight: outerGeometry.size.height)}
+                        .onChanged { self.model.onDragChangedLocal(DragValue($0)) }
+                        .onEnded { self.model.onDragEndedLocal(DragValue($0), outerHeight: outerGeometry.size.height)}
                 )
         }
     }
@@ -168,9 +182,9 @@ extension ViewHeightKey: ViewModifier {
 
 
 struct ReverseScrollView_Previews: PreviewProvider {
-    static let dragChangedSubject = DragChangedSubject()
-    static let dragEndedSubject = DragEndedSubject()
-    static let model = ScrollViewModel("previewModle",dragChangedSubject: dragChangedSubject, dragEndedSubject: dragEndedSubject)
+    static let inboundSubject = DragSubject()
+    static let outboundSubject = DragSubject()
+    static let model = ScrollViewModel("previewMode", inboundSubject: inboundSubject, outboundSubject: outboundSubject)
     static var previews: some View {
         ReverseScrollView(model: model) {
             BubbleView(message: "Hello")
