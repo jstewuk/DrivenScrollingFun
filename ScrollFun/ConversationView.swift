@@ -8,6 +8,7 @@
 
 import SwiftUI
 import Combine
+import os
 
 struct ConversationView: View {
     var conversation: Conversation
@@ -18,13 +19,15 @@ struct ConversationView: View {
     
     let dragChangedSubject = DragChangedSubject()
     let dragEndedSubject = DragEndedSubject()
+    let dragChangedSubject2 = DragChangedSubject()
+    let dragEndedSubject2 = DragEndedSubject()
     
     init(conversation: Conversation) {
         self.conversation = conversation
-        self.scrollViewModel1 = ScrollViewModel(dragChangedSubject: dragChangedSubject, dragEndedSubject: dragEndedSubject)
-        self.scrollViewModel2 = ScrollViewModel(dragChangedSubject: dragChangedSubject, dragEndedSubject: dragEndedSubject)
+        self.scrollViewModel1 = ScrollViewModel("model1", dragChangedSubject: dragChangedSubject, dragEndedSubject: dragEndedSubject)
+        self.scrollViewModel2 = ScrollViewModel("model2", dragChangedSubject: dragChangedSubject2, dragEndedSubject: dragEndedSubject2)
         self.cancellable = self.scrollViewModel1.objectWillChange.sink {
-            print("ScrollViewModel1 changed")
+            os_log("model1 changed")
         }
     }
     
