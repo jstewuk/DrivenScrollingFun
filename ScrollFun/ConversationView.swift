@@ -14,22 +14,28 @@ struct ConversationView: View {
     var conversation: Conversation
     var scrollViewModel1: ScrollViewModel
     var scrollViewModel2: ScrollViewModel
-    var cancellable: Cancellable
     
     let subj1_2 = DragSubject()
     let subj2_1 = DragSubject()
+    
+    @State private var latency: Double = 0.0
     
     init(conversation: Conversation) {
         self.conversation = conversation
         self.scrollViewModel1 = ScrollViewModel("model1", inboundSubject: subj2_1, outboundSubject: subj1_2)
         self.scrollViewModel2 = ScrollViewModel("model2", inboundSubject: subj1_2, outboundSubject: subj2_1)
-        self.cancellable = self.scrollViewModel1.objectWillChange.sink {
-            os_log("model1 changed")
-        }
     }
     
     var body: some View {
 //        print("ConversationView updated")
+        let latencyBinding = Binding(
+            get: { self.latency },
+            set: { self.latency = $0
+                self.scrollViewModel1.latency = $0
+                self.scrollViewModel2.latency = $0
+            }
+        )
+        
         return
             VStack {
                 NavigationView {
@@ -44,6 +50,9 @@ struct ConversationView: View {
                 }
                 
                 Button("scroll") { self.scrollMe() }
+                Text( "Latency is \(latency) seconds")
+                Slider(value: latencyBinding, in :0.001...2.0, step: 0.1)
+                
                 
                 NavigationView {
                     ReverseScrollView(model: scrollViewModel2) {

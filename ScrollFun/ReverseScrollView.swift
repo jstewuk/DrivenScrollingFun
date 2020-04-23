@@ -38,24 +38,31 @@ class ScrollViewModel: ObservableObject {
     
     @Published var dragGestureValue: DragGesture.Value?
     
+    var latency: Double {
+        didSet {
+            self.setupPipes()
+        }
+    }
+    
     let inboundSubject: DragSubject
     let outboundSubject : DragSubject
         
     var cancellables = [Cancellable]()
     private let instanceName: String
     
-    init(_ instanceName: String, inboundSubject: DragSubject, outboundSubject: DragSubject) {
+    init(_ instanceName: String, inboundSubject: DragSubject, outboundSubject: DragSubject, latency: Double = 0.0) {
         self.inboundSubject = inboundSubject
         self.outboundSubject = outboundSubject
         self.instanceName = instanceName
+        self.latency = latency
         self.setupPipes()
     }
     
     private func setupPipes() {
-        // Inbound
+        cancellables.removeAll()
         cancellables.append(
             inboundSubject
-                .delay(for: DispatchQueue.SchedulerTimeType.Stride(floatLiteral: 0.5), scheduler: DispatchQueue.main)
+                .delay(for: DispatchQueue.SchedulerTimeType.Stride(floatLiteral: latency), scheduler: DispatchQueue.main)
                 .sink { (value) in
                     os_log("received update")
                     switch value {
@@ -184,7 +191,7 @@ extension ViewHeightKey: ViewModifier {
 struct ReverseScrollView_Previews: PreviewProvider {
     static let inboundSubject = DragSubject()
     static let outboundSubject = DragSubject()
-    static let model = ScrollViewModel("previewMode", inboundSubject: inboundSubject, outboundSubject: outboundSubject)
+    static let model = ScrollViewModel("previewMode", inboundSubject: inboundSubject, outboundSubject: outboundSubject, latency: 0.1)
     static var previews: some View {
         ReverseScrollView(model: model) {
             BubbleView(message: "Hello")
