@@ -19,6 +19,7 @@ struct ConversationView: View {
     let subj2_1 = DragSubject()
     
     @State private var latency: Double = 0.0
+    @State private var reliability: Double = 100.0
     
     init(conversation: Conversation) {
         self.conversation = conversation
@@ -33,6 +34,14 @@ struct ConversationView: View {
             set: { self.latency = $0
                 self.scrollViewModel1.latency = $0
                 self.scrollViewModel2.latency = $0
+            }
+        )
+        
+        let reliabilityBinding = Binding(
+            get: { self.reliability },
+            set: { self.reliability = $0
+                self.scrollViewModel1.reliability = Int($0)
+                self.scrollViewModel2.reliability = Int($0)
             }
         )
         
@@ -52,7 +61,8 @@ struct ConversationView: View {
                 Button("scroll") { self.scrollMe() }
                 Text( "Latency is \(latency) seconds")
                 Slider(value: latencyBinding, in :0.001...2.0, step: 0.1)
-                
+                Text( "Reliability is \(reliability)%")
+                Slider(value: reliabilityBinding, in :0.0...100.0, step: 5.0)
                 
                 NavigationView {
                     ReverseScrollView(model: scrollViewModel2) {
