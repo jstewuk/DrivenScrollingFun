@@ -19,6 +19,7 @@ struct EndWrapper {
 struct DragValue {
     let startLocation: CGPoint
     let location: CGPoint
+    var delta: CGPoint { CGPoint(x: location.x - startLocation.x, y: location.y - startLocation.y) }
     init(_ value: DragGesture.Value) {
         self.startLocation = value.startLocation
         self.location = value.location
@@ -101,7 +102,7 @@ class ScrollViewModel: ObservableObject {
         // Update rendered offset
         //os_log("Start: %@","\(value.startLocation.y)")
         //os_log("Current: %@", "\(value.location.y)")
-        scrollOffset = (value.location.y - value.startLocation.y)
+        scrollOffset = value.delta.y
         //os_log("scrollOffset: %@", "\(self.scrollOffset)")
     }
     
@@ -122,21 +123,14 @@ class ScrollViewModel: ObservableObject {
         let scrollOffset = value.location.y - value.startLocation.y
         //os_log("Ended currentOffset= %@  scrollOffset= %@", "\(self.currentOffset)", "\(scrollOffset)")
         
-        let topLimit = self.contentHeight - outerHeight
-        //os_log("topLimit: %@", "\(topLimit)")
-        
-        // Negative topLimit => Content is smaller than screen size.  We reset the scroll position on drag end:
-        if topLimit < 0 {
+        if outerHeight >= contentHeight {  // Don't need to scroll at all
             self.currentOffset = 0
+        } else if currentOffset + scrollOffset > 0 { // scrolled past top => clamp
+            self.currentOffset = 0
+        } else if currentOffset + scrollOffset <  -(contentHeight - outerHeight) { // scrolled past bottom => clamp
+            self.currentOffset = -(contentHeight - outerHeight)
         } else {
-            // We cannot pass the bottom limit (negative scroll)
-            if self.currentOffset + scrollOffset < 0 {
-                self.currentOffset = 0
-            } else if self.currentOffset + scrollOffset > topLimit {
-                self.currentOffset = topLimit
-            } else {
-                self.currentOffset += scrollOffset
-            }
+            self.currentOffset += scrollOffset
         }
         //os_log("new currentOffset= %@", "\(self.currentOffset)")
         self.scrollOffset = 0
@@ -146,7 +140,8 @@ class ScrollViewModel: ObservableObject {
         //os_log("outerHeight: %@ innerHeight: %@", "\(outerHeight)", "\(innerHeight)")
         
         let totalOffset = currentOffset + scrollOffset
-        return -((innerHeight/2 - outerHeight/2) - totalOffset)
+//        return -((innerHeight/2 - outerHeight/2) - totalOffset)
+        return totalOffset - (outerHeight/2 - innerHeight/2)
     }
 }
 
