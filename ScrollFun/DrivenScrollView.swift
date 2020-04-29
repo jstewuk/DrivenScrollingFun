@@ -1,5 +1,5 @@
 //
-//  ReverseScrollView.swift
+//  DrivenScrollView.swift
 //  ScrollFun
 //
 //  Created by James Stewart on 4/18/20.
@@ -10,17 +10,17 @@ import SwiftUI
 import Combine
 import os
 
-struct ReverseScrollView<Content>: View where Content: View {
+struct DrivenScrollView<Content>: View where Content: View {
     
-    @ObservedObject var model: ScrollViewModel
+    @ObservedObject var model: DrivenScrollViewModel
     
     var scrollOffset: Binding<CGFloat> { $model.scrollOffset }
     var contentHeight: Binding<CGFloat> { $model.contentHeight }
     var currentOffset: Binding<CGFloat> { $model.currentOffset }
     var content: () -> Content
+    let enabledScrollAxes: [Axis] = [.vertical]
     
     var body: some View {
-        //os_log("ReversScrollView rerendered")
         return
             GeometryReader { outerGeometry in
             self.content()
@@ -32,8 +32,8 @@ struct ReverseScrollView<Content>: View where Content: View {
                 .animation(.easeInOut)
                 .gesture(
                     DragGesture()
-                        .onChanged { self.model.onDragChangedLocal(DragValue($0)) }
-                        .onEnded { self.model.onDragEndedLocal(DragValue($0), outerHeight: outerGeometry.size.height)}
+                        .onChanged { self.model.onDragChangedLocal(LocationDelta($0)) }
+                        .onEnded { self.model.onDragEndedLocal(LocationDelta($0), outerHeight: outerGeometry.size.height)}
                 )
         }
     }
@@ -55,12 +55,12 @@ extension ViewHeightKey: ViewModifier {
 }
 
 
-struct ReverseScrollView_Previews: PreviewProvider {
+struct DrivenScrolliew_Previews: PreviewProvider {
     static let inboundSubject = DragSubject()
     static let outboundSubject = DragSubject()
-    static let model = ScrollViewModel("previewMode", inboundSubject: inboundSubject, outboundSubject: outboundSubject, latency: 0.1)
+    static let model = DrivenScrollViewModel("previewMode", enabledAxes: [.horizontal], inboundSubject: inboundSubject, outboundSubject: outboundSubject, latency: 0.1)
     static var previews: some View {
-        ReverseScrollView(model: model) {
+        DrivenScrollView(model: model) {
             BubbleView(message: "Hello")
         }
         .previewLayout(.sizeThatFits)

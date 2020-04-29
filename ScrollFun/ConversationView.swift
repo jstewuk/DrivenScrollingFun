@@ -12,8 +12,8 @@ import os
 
 struct ConversationView: View {
     var conversation: Conversation
-    var scrollViewModel1: ScrollViewModel
-    var scrollViewModel2: ScrollViewModel
+    var scrollViewModel1: DrivenScrollViewModel
+    var scrollViewModel2: DrivenScrollViewModel
     
     let subj1_2 = DragSubject()
     let subj2_1 = DragSubject()
@@ -23,8 +23,8 @@ struct ConversationView: View {
     
     init(conversation: Conversation) {
         self.conversation = conversation
-        self.scrollViewModel1 = ScrollViewModel("model1", inboundSubject: subj2_1, outboundSubject: subj1_2)
-        self.scrollViewModel2 = ScrollViewModel("model2", inboundSubject: subj1_2, outboundSubject: subj2_1)
+        self.scrollViewModel1 = DrivenScrollViewModel("model1", enabledAxes: [.horizontal], inboundSubject: subj2_1, outboundSubject: subj1_2)
+        self.scrollViewModel2 = DrivenScrollViewModel("model2", enabledAxes: [.horizontal], inboundSubject: subj1_2, outboundSubject: subj2_1)
     }
     
     var body: some View {
@@ -48,7 +48,7 @@ struct ConversationView: View {
         return
             VStack {
                 NavigationView {
-                    ReverseScrollView(model: scrollViewModel1) {
+                    DrivenScrollView(model: scrollViewModel1) {
                         VStack(spacing: 8) {
                             ForEach(self.conversation.messages) { message in
                                 BubbleView(message: message.body)
@@ -65,7 +65,7 @@ struct ConversationView: View {
                 Slider(value: reliabilityBinding, in :0.0...100.0, step: 5.0)
                 
                 NavigationView {
-                    ReverseScrollView(model: scrollViewModel2) {
+                    DrivenScrollView(model: scrollViewModel2) {
                         VStack(spacing: 8) {
                             ForEach(self.conversation.messages) { message in
                                 BubbleView(message: message.body)

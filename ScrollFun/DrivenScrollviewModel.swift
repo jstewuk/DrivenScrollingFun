@@ -1,5 +1,5 @@
 //
-//  ReverseScrollViewModel.swift
+//  DrivenScrollViewModel.swift
 //  ScrollFun
 //
 //  Created by James Stewart on 4/28/20.
@@ -12,33 +12,30 @@ import Combine
 import os
 
 struct EndWrapper {
-    let value: DragValue
+    let value: LocationDelta
     let outerHeight: CGFloat
 }
 
-struct DragValue {
-    let startLocation: CGPoint
-    let location: CGPoint
-    var delta: CGPoint { CGPoint(x: location.x - startLocation.x, y: location.y - startLocation.y) }
+struct LocationDelta {
+    let delta: CGPoint
     init(_ value: DragGesture.Value) {
-        self.startLocation = value.startLocation
-        self.location = value.location
+        delta = CGPoint(x: value.location.x - value.startLocation.x, y: value.location.y - value.startLocation.y)
     }
 }
 
 enum DragData {
     case dragEnded(EndWrapper)
-    case dragChanged(DragValue)
+    case dragChanged(LocationDelta)
 }
 
 typealias DragSubject = PassthroughSubject<DragData, Never>
 
-class ScrollViewModel: ObservableObject {
+class DrivenScrollViewModel: ObservableObject {
     @Published var scrollOffset:  CGFloat = CGFloat.zero
     @Published var contentHeight: CGFloat = CGFloat.zero
     @Published var currentOffset: CGFloat = CGFloat.zero
     
-    @Published var dragGestureValue: DragGesture.Value?
+    let enabledAxes: [Axis]
     
     var latency: Double {
         didSet {
@@ -58,7 +55,8 @@ class ScrollViewModel: ObservableObject {
     var cancellables = [Cancellable]()
     private let instanceName: String
     
-    init(_ instanceName: String, inboundSubject: DragSubject, outboundSubject: DragSubject, latency: Double = 0.0, reliability: Int = 100) {
+    init(_ instanceName: String, enabledAxes: [Axis], inboundSubject: DragSubject, outboundSubject: DragSubject,  latency: Double = 0.0, reliability: Int = 100) {
+        self.enabledAxes = enabledAxes
         self.inboundSubject = inboundSubject
         self.outboundSubject = outboundSubject
         self.instanceName = instanceName
@@ -82,28 +80,22 @@ class ScrollViewModel: ObservableObject {
                         self.onDragEndedRemote(endWrapper)
                     case let .dragChanged(value):
                         self.onDragChangedRemote(value)
-                    }
+                }
             }
         )
     }
     
-    
-    
-    private func onDragChangedRemote(_ value: DragValue) {
+    private func onDragChangedRemote(_ value: LocationDelta) {
         onDragChanged(value)
     }
     
-    func onDragChangedLocal(_ value: DragValue) {
+    func onDragChangedLocal(_ value: LocationDelta) {
         onDragChanged(value)
         outboundSubject.send(.dragChanged(value))
     }
     
-    private func onDragChanged(_ value: DragValue) {
-        // Update rendered offset
-        //os_log("Start: %@","\(value.startLocation.y)")
-        //os_log("Current: %@", "\(value.location.y)")
+    private func onDragChanged(_ value: LocationDelta) {
         scrollOffset = value.delta.y
-        //os_log("scrollOffset: %@", "\(self.scrollOffset)")
     }
     
     private func onDragEndedRemote(_ value: EndWrapper) {
@@ -111,16 +103,15 @@ class ScrollViewModel: ObservableObject {
         onDragEnded(value.value, outerHeight: value.outerHeight)
     }
     
-    func onDragEndedLocal(_ value: DragValue, outerHeight: CGFloat) {
+    func onDragEndedLocal(_ value: LocationDelta, outerHeight: CGFloat) {
         //os_log("$@ ondDragEndedLocal", self.instanceName)
         onDragEnded(value, outerHeight: outerHeight)
         outboundSubject.send(.dragEnded(EndWrapper(value: value, outerHeight: outerHeight)))
     }
     
-    private func onDragEnded(_ value: DragValue, outerHeight: CGFloat) {
-        // Update view to target position base on drag position
+    private func onDragEnded(_ value: LocationDelta, outerHeight: CGFloat) {
         //os_log("%@ onDragEnded", self.instanceName)
-        let scrollOffset = value.location.y - value.startLocation.y
+        let scrollOffset = value.delta.y
         //os_log("Ended currentOffset= %@  scrollOffset= %@", "\(self.currentOffset)", "\(scrollOffset)")
         
         if outerHeight >= contentHeight {  // Don't need to scroll at all
@@ -129,7 +120,7 @@ class ScrollViewModel: ObservableObject {
             self.currentOffset = 0
         } else if currentOffset + scrollOffset <  -(contentHeight - outerHeight) { // scrolled past bottom => clamp
             self.currentOffset = -(contentHeight - outerHeight)
-        } else {
+        } else {                                // Normal in bounds scrolling
             self.currentOffset += scrollOffset
         }
         //os_log("new currentOffset= %@", "\(self.currentOffset)")
@@ -138,13 +129,7 @@ class ScrollViewModel: ObservableObject {
     
     func offset(outerHeight: CGFloat, innerHeight: CGFloat) -> CGFloat {
         //os_log("outerHeight: %@ innerHeight: %@", "\(outerHeight)", "\(innerHeight)")
-        
         let totalOffset = currentOffset + scrollOffset
-//        return -((innerHeight/2 - outerHeight/2) - totalOffset)
         return totalOffset - (outerHeight/2 - innerHeight/2)
     }
-}
-
-class DummyModel: ObservableObject {
-    @Published var dummyVar: Int = 0
 }
