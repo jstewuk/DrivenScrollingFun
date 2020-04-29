@@ -11,29 +11,29 @@ import SwiftUI
 import Combine
 import os
 
-struct EndWrapper {
+struct DragWrapper {
     let value: LocationDelta
-    let outerHeight: CGFloat
+    let outerSize: CGSize
 }
 
 struct LocationDelta {
-    let delta: CGPoint
+    var delta: CGPoint
     init(_ value: DragGesture.Value) {
         delta = CGPoint(x: value.location.x - value.startLocation.x, y: value.location.y - value.startLocation.y)
     }
 }
 
 enum DragData {
-    case dragEnded(EndWrapper)
-    case dragChanged(LocationDelta)
+    case dragEnded(DragWrapper)
+    case dragChanged(DragWrapper)
 }
 
 typealias DragSubject = PassthroughSubject<DragData, Never>
 
-class DrivenScrollViewModel: ObservableObject {
-    @Published var scrollOffset:  CGFloat = CGFloat.zero
-    @Published var contentHeight: CGFloat = CGFloat.zero
-    @Published var currentOffset: CGFloat = CGFloat.zero
+final class DrivenScrollViewModel: ObservableObject {
+    @Published var scrollOffset:  CGPoint = CGPoint.zero
+    @Published var contentSize: CGSize = CGSize.zero
+    @Published var currentOffset: CGPoint = CGPoint.zero
     
     let enabledAxes: [Axis]
     
@@ -85,51 +85,82 @@ class DrivenScrollViewModel: ObservableObject {
         )
     }
     
-    private func onDragChangedRemote(_ value: LocationDelta) {
+    private func onDragChangedRemote(_ value: DragWrapper) {
         onDragChanged(value)
     }
     
-    func onDragChangedLocal(_ value: LocationDelta) {
+    func onDragChangedLocal(_ value: DragWrapper) {
         onDragChanged(value)
-        outboundSubject.send(.dragChanged(value))
+        let enabledValue = enabledValues(value)
+        outboundSubject.send(.dragChanged(enabledValue))
     }
     
-    private func onDragChanged(_ value: LocationDelta) {
-        scrollOffset = value.delta.y
+    private func onDragChanged(_ value: DragWrapper) {
+        scrollOffset = enabledValues(value).value.delta
     }
     
-    private func onDragEndedRemote(_ value: EndWrapper) {
-        //os_log("%@ onDragEndedRemote", self.instanceName)
-        onDragEnded(value.value, outerHeight: value.outerHeight)
+    private func enabledValues(_ value: DragWrapper) -> DragWrapper {
+        var filteredValue = CGPoint.zero
+        if value.outerSize.width < contentSize.width && enabledAxes.contains(.horizontal) {
+            filteredValue.x = value.value.delta.x
+        }
+        if value.outerSize.height < contentSize.height && enabledAxes.contains(.vertical) {
+            filteredValue.y = value.value.delta.y
+        }
+        var locationDelta = value.value
+        locationDelta.delta = filteredValue
+        return DragWrapper(value: locationDelta, outerSize: value.outerSize)
     }
     
-    func onDragEndedLocal(_ value: LocationDelta, outerHeight: CGFloat) {
-        //os_log("$@ ondDragEndedLocal", self.instanceName)
-        onDragEnded(value, outerHeight: outerHeight)
-        outboundSubject.send(.dragEnded(EndWrapper(value: value, outerHeight: outerHeight)))
+    private func onDragEndedRemote(_ value: DragWrapper) {
+        onDragEnded(value)
     }
     
-    private func onDragEnded(_ value: LocationDelta, outerHeight: CGFloat) {
+    func onDragEndedLocal(_ value: DragWrapper) {
+        onDragEnded(value)
+        let enabledValue = enabledValues(value)
+        outboundSubject.send(.dragEnded(enabledValue))
+    }
+    
+    private func onDragEnded(_ value: DragWrapper) {
         //os_log("%@ onDragEnded", self.instanceName)
-        let scrollOffset = value.delta.y
-        //os_log("Ended currentOffset= %@  scrollOffset= %@", "\(self.currentOffset)", "\(scrollOffset)")
         
-        if outerHeight >= contentHeight {  // Don't need to scroll at all
-            self.currentOffset = 0
-        } else if currentOffset + scrollOffset > 0 { // scrolled past top => clamp
-            self.currentOffset = 0
-        } else if currentOffset + scrollOffset <  -(contentHeight - outerHeight) { // scrolled past bottom => clamp
-            self.currentOffset = -(contentHeight - outerHeight)
-        } else {                                // Normal in bounds scrolling
-            self.currentOffset += scrollOffset
+        for axis in enabledAxes {
+            if case .horizontal = axis {
+                self.currentOffset.x = axisCurrentOffset(axis: axis, scrollOffset: value.value.delta, outerSize: value.outerSize, contentSize: contentSize)
+            } else {
+                self.currentOffset.y = axisCurrentOffset(axis: axis, scrollOffset: value.value.delta, outerSize: value.outerSize, contentSize: contentSize)
+            }
         }
         //os_log("new currentOffset= %@", "\(self.currentOffset)")
-        self.scrollOffset = 0
+        self.scrollOffset = CGPoint.zero
     }
     
-    func offset(outerHeight: CGFloat, innerHeight: CGFloat) -> CGFloat {
+    func axisCurrentOffset(axis: Axis, scrollOffset: CGPoint, outerSize: CGSize, contentSize: CGSize) -> CGFloat {
+        let currentOffsetValue = self.currentOffset.axis(axis)
+        let scrollOffsetValue = scrollOffset.axis(axis)
+        let contentSizeValue = contentSize.axis(axis)
+        let outerSizeValue = outerSize.axis(axis)
+        
+        if currentOffsetValue + scrollOffsetValue > 0 { // scrolled past top/left => clamp
+            return .zero
+        } else if currentOffsetValue + scrollOffsetValue <  -(contentSizeValue - outerSizeValue) { // scrolled past bottom/right => clamp
+            return -(contentSizeValue - outerSizeValue)
+        } else {                                // Normal in bounds scrolling
+            return currentOffsetValue + scrollOffsetValue
+        }
+    }
+    
+    func offset(outerSize: CGSize, innerSize: CGSize) -> CGPoint {
         //os_log("outerHeight: %@ innerHeight: %@", "\(outerHeight)", "\(innerHeight)")
-        let totalOffset = currentOffset + scrollOffset
-        return totalOffset - (outerHeight/2 - innerHeight/2)
+        var totalOffset = CGPoint.zero
+        for axis in enabledAxes {
+            if case .horizontal = axis {
+                totalOffset.x = currentOffset.x + scrollOffset.x
+            } else {
+                totalOffset.y = currentOffset.y + scrollOffset.y
+            }
+        }
+        return totalOffset - CGPoint(outerSize/2 - innerSize/2)
     }
 }

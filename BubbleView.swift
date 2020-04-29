@@ -15,9 +15,11 @@ struct BubbleView: View {
         HStack {
             Spacer()
             Text(message)
+            Spacer()
         }
         .padding(10)
         .background(Color.gray)
+        //.frame(width: 500)
     }
 }
 

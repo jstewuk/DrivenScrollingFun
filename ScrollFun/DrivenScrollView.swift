@@ -14,42 +14,54 @@ struct DrivenScrollView<Content>: View where Content: View {
     
     @ObservedObject var model: DrivenScrollViewModel
     
-    var scrollOffset: Binding<CGFloat> { $model.scrollOffset }
-    var contentHeight: Binding<CGFloat> { $model.contentHeight }
-    var currentOffset: Binding<CGFloat> { $model.currentOffset }
+    var scrollOffset: Binding<CGPoint> { $model.scrollOffset }
+    var contentSize: Binding<CGSize> { $model.contentSize }
+    var currentOffset: Binding<CGPoint> { $model.currentOffset }
     var content: () -> Content
     let enabledScrollAxes: [Axis] = [.vertical]
+    
+    init(enabledAxes: [Axis], inboundSubject: DragSubject, outboundSubject: DragSubject, @ViewBuilder content: @escaping () -> Content) {
+        self.model = DrivenScrollViewModel("model", enabledAxes: enabledAxes, inboundSubject: inboundSubject, outboundSubject: outboundSubject)
+        self.content = content
+    }
     
     var body: some View {
         return
             GeometryReader { outerGeometry in
             self.content()
-                .modifier(ViewHeightKey())
-                .onPreferenceChange(ViewHeightKey.self) { self.contentHeight.wrappedValue = $0 }
-                .frame(height: outerGeometry.size.height)
-                .offset(y: self.model.offset(outerHeight: outerGeometry.size.height, innerHeight: self.contentHeight.wrappedValue))
+                .modifier(ViewSizeKey())
+                .onPreferenceChange(ViewSizeKey.self) { self.contentSize.wrappedValue = $0 }
+                .frame(width: outerGeometry.size.width, height: outerGeometry.size.height)
+                .offset(
+                    x: self.model.offset(outerSize: outerGeometry.size, innerSize: self.contentSize.wrappedValue).x,
+                    y: self.model.offset(outerSize: outerGeometry.size, innerSize: self.contentSize.wrappedValue).y
+                )
                 .clipped()
                 .animation(.easeInOut)
                 .gesture(
                     DragGesture()
-                        .onChanged { self.model.onDragChangedLocal(LocationDelta($0)) }
-                        .onEnded { self.model.onDragEndedLocal(LocationDelta($0), outerHeight: outerGeometry.size.height)}
+                        .onChanged {
+                            self.model.onDragChangedLocal(DragWrapper(value: LocationDelta($0), outerSize: outerGeometry.size))
+                        }
+                        .onEnded {
+                            self.model.onDragEndedLocal(DragWrapper(value: LocationDelta($0), outerSize: outerGeometry.size))
+                        }
                 )
         }
     }
 }
 
-struct ViewHeightKey: PreferenceKey {
-    static var defaultValue: CGFloat { 0 }
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+struct ViewSizeKey: PreferenceKey {
+    static var defaultValue: CGSize { CGSize.zero }
+    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
         value += nextValue()
     }
 }
 
-extension ViewHeightKey: ViewModifier {
+extension ViewSizeKey: ViewModifier {
     func body(content: Content) -> some View {
         return content.background(GeometryReader { proxy in
-            Color.clear.preference(key: Self.self, value: proxy.size.height)
+            Color.clear.preference(key: Self.self, value: proxy.size)
         })
     }
 }
@@ -60,7 +72,7 @@ struct DrivenScrolliew_Previews: PreviewProvider {
     static let outboundSubject = DragSubject()
     static let model = DrivenScrollViewModel("previewMode", enabledAxes: [.horizontal], inboundSubject: inboundSubject, outboundSubject: outboundSubject, latency: 0.1)
     static var previews: some View {
-        DrivenScrollView(model: model) {
+        DrivenScrollView(enabledAxes: [.horizontal], inboundSubject: inboundSubject, outboundSubject: outboundSubject) {
             BubbleView(message: "Hello")
         }
         .previewLayout(.sizeThatFits)

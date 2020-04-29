@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		3861B7FE245843020077D28B /* PublisherUtilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3861B7FD245843020077D28B /* PublisherUtilities.swift */; };
 		3861B802245843710077D28B /* DrivenScrollviewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3861B801245843710077D28B /* DrivenScrollviewModel.swift */; };
+		3861B806245998A90077D28B /* CGExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3861B805245998A90077D28B /* CGExtensions.swift */; };
 		3890AC782456F128006D779F /* ExploratoryReliabilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3890AC772456F128006D779F /* ExploratoryReliabilityTests.swift */; };
 		38C0B48C244BC1DA007AFC4D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38C0B48B244BC1DA007AFC4D /* AppDelegate.swift */; };
 		38C0B48E244BC1DA007AFC4D /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38C0B48D244BC1DA007AFC4D /* SceneDelegate.swift */; };
@@ -57,6 +58,7 @@
 /* Begin PBXFileReference section */
 		3861B7FD245843020077D28B /* PublisherUtilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublisherUtilities.swift; sourceTree = "<group>"; };
 		3861B801245843710077D28B /* DrivenScrollviewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrivenScrollviewModel.swift; sourceTree = "<group>"; };
+		3861B805245998A90077D28B /* CGExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CGExtensions.swift; sourceTree = "<group>"; };
 		3890AC772456F128006D779F /* ExploratoryReliabilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExploratoryReliabilityTests.swift; sourceTree = "<group>"; };
 		3890AC9D2456F9FF006D779F /* ReliabilityStream.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = ReliabilityStream.xcodeproj; path = ../../ReliabilityStream/ReliabilityStream.xcodeproj; sourceTree = "<group>"; };
 		38C0B488244BC1DA007AFC4D /* ScrollFun.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScrollFun.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -143,6 +145,7 @@
 				38C0B48F244BC1DA007AFC4D /* ConversationView.swift */,
 				38C0B4BF244BCEF8007AFC4D /* DrivenScrollView.swift */,
 				3861B801245843710077D28B /* DrivenScrollviewModel.swift */,
+				3861B805245998A90077D28B /* CGExtensions.swift */,
 				38C0B491244BC1DB007AFC4D /* Assets.xcassets */,
 				38C0B496244BC1DB007AFC4D /* LaunchScreen.storyboard */,
 				38C0B499244BC1DB007AFC4D /* Info.plist */,
@@ -333,6 +336,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3861B806245998A90077D28B /* CGExtensions.swift in Sources */,
 				38C0B4BE244BC31F007AFC4D /* BubbleView.swift in Sources */,
 				38C0B4BC244BC212007AFC4D /* Conversation.swift in Sources */,
 				38C0B48C244BC1DA007AFC4D /* AppDelegate.swift in Sources */,
